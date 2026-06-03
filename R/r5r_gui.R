@@ -10,6 +10,14 @@
 #' @param departure_date A Date object specifying the initial departure date for the trip. Defaults to the current system date.
 #' @param mode A character vector specifying the initial transport modes. This is passed directly to the `mode` argument in [detailed_itineraries()][r5r::detailed_itineraries] (and other functions of [`r5r`][r5r::r5r]). Defaults to `c("WALK", "TRANSIT")`.
 #' @param basemaps A named list of MapLibre style URLs (or style generator functions like [mapgl::carto_style()]). The names are used in the GUI selector. Defaults to a set of Carto styles (Voyager, Positron, Dark Matter). See [mapgl styling helpers](https://walker-data.com/mapgl/reference/index.html#styling-helpers) for options.
+#' @param location_choices Optional data frame with the possible origins and destinations. When provided, the GUI uses dropdowns instead of free-form coordinate fields.
+#' @param location_id_col Name of the column in `location_choices` that stores the internal identifier used in the dropdowns. Defaults to `"id"`.
+#' @param location_label_col Name of the column in `location_choices` that stores the visible label used in the dropdowns. Defaults to `"name"`.
+#' @param location_lon_col Name of the longitude column in `location_choices`. Defaults to `"lon"`.
+#' @param location_lat_col Name of the latitude column in `location_choices`. Defaults to `"lat"`.
+#' @param unit_polygons Optional `sf` object with the unit polygons to draw on the map. If provided, the polygons will be clickable and show hover labels.
+#' @param unit_polygon_id_col Name of the polygon column that stores the internal unit identifier. Defaults to `"id"`.
+#' @param unit_polygon_label_col Name of the polygon column that stores the visible unit name. Defaults to `"name"`.
 #'
 #' @return This function does not return a value; it launches a Shiny application.
 #'
@@ -55,7 +63,15 @@ r5r_gui <- function(
     "Positron" = mapgl::carto_style("positron"),
     "Dark Matter" = mapgl::carto_style("dark-matter"),
     "Voyager" = mapgl::carto_style("voyager")
-  )
+  ),
+  location_choices = NULL,
+  location_id_col = "id",
+  location_label_col = "name",
+  location_lon_col = "lon",
+  location_lat_col = "lat",
+  unit_polygons = NULL,
+  unit_polygon_id_col = "osm_id",
+  unit_polygon_label_col = "name"
 ) {
   if (!check_r5r_available()) {
     stop(
@@ -101,6 +117,73 @@ r5r_gui <- function(
     primary_network <- r5r_network
     # Use the object name passed by the user
     r5r_network <- stats::setNames(list(r5r_network), r5r_network_name)
+  }
+
+  normalized_location_choices <- NULL
+  if (!is.null(location_choices)) {
+    if (!inherits(location_choices, "data.frame")) {
+      stop(
+        "'location_choices' must be a data frame with label and coordinate columns.",
+        call. = FALSE
+      )
+    }
+
+    required_location_cols <- c(
+      location_id_col,
+      location_label_col,
+      location_lon_col,
+      location_lat_col
+    )
+    missing_location_cols <- setdiff(required_location_cols, names(location_choices))
+    if (length(missing_location_cols) > 0) {
+      stop(
+        sprintf(
+          "'location_choices' is missing the following columns: %s",
+          paste(missing_location_cols, collapse = ", ")
+        ),
+        call. = FALSE
+      )
+    }
+
+    normalized_location_choices <- data.frame(
+      id = as.character(location_choices[[location_id_col]]),
+      label = as.character(location_choices[[location_label_col]]),
+      lon = as.numeric(location_choices[[location_lon_col]]),
+      lat = as.numeric(location_choices[[location_lat_col]]),
+      stringsAsFactors = FALSE
+    )
+  }
+
+  normalized_unit_polygons <- unit_polygons
+  if (!is.null(unit_polygons)) {
+    if (!inherits(unit_polygons, "sf")) {
+      stop(
+        "'unit_polygons' must be an sf object when provided.",
+        call. = FALSE
+      )
+    }
+
+    missing_polygon_cols <- setdiff(
+      c(unit_polygon_id_col, unit_polygon_label_col),
+      names(unit_polygons)
+    )
+    if (length(missing_polygon_cols) > 0) {
+      stop(
+        sprintf(
+          "'unit_polygons' is missing the following columns: %s",
+          paste(missing_polygon_cols, collapse = ", ")
+        ),
+        call. = FALSE
+      )
+    }
+
+    normalized_unit_polygons <- unit_polygons
+    names(normalized_unit_polygons)[
+      names(normalized_unit_polygons) == unit_polygon_id_col
+    ] <- "unit_id"
+    names(normalized_unit_polygons)[
+      names(normalized_unit_polygons) == unit_polygon_label_col
+    ] <- "unit_name"
   }
 
   # if center or zoom are not provided, calculate them from the network bbox
@@ -157,7 +240,11 @@ r5r_gui <- function(
     zoom = zoom,
     departure_date = departure_date,
     mode = mode,
-    basemaps = basemaps
+    basemaps = basemaps,
+    location_choices = normalized_location_choices,
+    unit_polygons = normalized_unit_polygons,
+    unit_polygon_id_col = "unit_id",
+    unit_polygon_label_col = "unit_name"
   )
 
   # Use the factory to create the final server function

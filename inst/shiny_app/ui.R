@@ -182,6 +182,19 @@ ui <- shiny::fluidPage(
       .basemap-panel .selectize-control {
         margin-bottom: 0 !important;
       }
+
+      .sidebar-column .selectize-dropdown-content .option {
+        padding: 8px 12px !important;
+        border-bottom: 1px solid #eef2f7;
+      }
+
+      .sidebar-column .selectize-dropdown-content .option:last-child {
+        border-bottom: 0;
+      }
+
+      .sidebar-column .selectize-input {
+        min-height: 38px;
+      }
     "
     )),
     shiny::tags$script(shiny::HTML(
@@ -355,7 +368,12 @@ ui <- shiny::fluidPage(
                 
                 // Identify layers to preserve (specifically route layers)
                 const layersToPreserve = currentStyle.layers.filter(l => 
-                  l.id && (l.id.startsWith('route') || l.id === 'route_layer_1' || l.id === 'route_layer_2')
+                  l.id && (
+                    l.id.startsWith('route') ||
+                    l.id.startsWith('ufba_units_') ||
+                    l.id === 'route_layer_1' ||
+                    l.id === 'route_layer_2'
+                  )
                 );
                 
                 if (layersToPreserve.length === 0) {
@@ -383,6 +401,34 @@ ui <- shiny::fluidPage(
                 console.error('Error fetching/setting persistent style:', err);
                 map.setStyle(newStyleUrl, { diff: true });
               });
+          });
+
+          const unitLayerIds = [
+            'ufba_units_base',
+            'ufba_units_origin_highlight',
+            'ufba_units_destination_highlight'
+          ];
+
+          const getClickedUnitFeature = (point) => {
+            const features = map.queryRenderedFeatures(point, { layers: unitLayerIds });
+            return features.length > 0 ? features[0] : null;
+          };
+
+          map.on('mousemove', (e) => {
+            const feature = getClickedUnitFeature(e.point);
+            map.getCanvas().style.cursor = feature ? 'pointer' : '';
+          });
+
+          map.on('click', (e) => {
+            const feature = getClickedUnitFeature(e.point);
+            if (!feature) return;
+
+            const properties = feature.properties || {};
+            Shiny.setInputValue('ufba_unit_click', {
+              id: properties.unit_id || null,
+              label: properties.unit_name || null,
+              nonce: Math.random()
+            }, { priority: 'event' });
           });
 
           obs.disconnect();
@@ -461,23 +507,7 @@ ui <- shiny::fluidPage(
         max = 300
       ),
       shiny::hr(),
-      shiny::h4("Route Selection"),
-      shiny::helpText("Left-click: Start. Right-click: End."),
-      shiny::actionButton(
-        "reset",
-        "Reset Points",
-        style = "width: 100%; margin-bottom: 10px;"
-      ),
-      shiny::textInput(
-        "start_coords_input",
-        "Start (Lat, Lon)",
-        placeholder = "-30.03, -51.22"
-      ),
-      shiny::textInput(
-        "end_coords_input",
-        "End (Lat, Lon)",
-        placeholder = "-30.05, -51.18"
-      )
+      shiny::uiOutput("route_selection_ui")
     ),
 
     # Left Resizer

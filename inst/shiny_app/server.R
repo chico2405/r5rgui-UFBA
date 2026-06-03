@@ -46,7 +46,7 @@ function(app_args) {
           style = "margin-bottom: 10px;",
           shiny::selectInput(
             "network_1_internal",
-            "Network",
+            "Rede",
             choices = network_names,
             selected = network_names[1]
           )
@@ -67,7 +67,7 @@ function(app_args) {
           style = "margin-bottom: 10px;",
           shiny::selectInput(
             "network_2_internal",
-            "Network",
+            "Rede",
             choices = network_names,
             selected = default_net
           )
@@ -78,6 +78,12 @@ function(app_args) {
     })
 
     locations <- shiny::reactiveValues(start = NULL, end = NULL)
+    location_choices <- app_args$location_choices
+    unit_polygons <- app_args$unit_polygons
+    has_unit_selection <- !is.null(location_choices) && nrow(location_choices) > 0
+    has_unit_polygons <- !is.null(unit_polygons)
+    selection_target <- shiny::reactiveVal("origin")
+    selected_location_ids <- shiny::reactiveValues(origin = NULL, destination = NULL)
     copy_code_message <- shiny::reactiveVal(NULL)
     r5r_exec_time_1 <- shiny::reactiveVal(NULL)
     r5r_exec_time_2 <- shiny::reactiveVal(NULL)
@@ -85,12 +91,12 @@ function(app_args) {
     current_basemap <- shiny::reactiveVal(unname(basemaps[[1]]))
 
     output$left_sidebar_title <- shiny::renderUI({
-      if (compare_mode()) "Route 1 Settings" else "Trip Parameters"
+      if (compare_mode()) "Configurações da rota 1" else "Parâmetros da viagem"
     })
 
     output$compare_mode_ui <- shiny::renderUI({
       active <- compare_mode()
-      label <- if (active) "Mode: Compare" else "Mode: Normal"
+      label <- if (active) "Modo: comparar" else "Modo: normal"
       color <- if (active) "#984ea3" else "#3b82f6"
 
       shiny::actionButton(
@@ -113,6 +119,83 @@ function(app_args) {
 
     output$copy_code_message_ui <- shiny::renderUI({
       copy_code_message()
+    })
+
+    output$route_selection_ui <- shiny::renderUI({
+      if (has_unit_selection) {
+        location_choices_vector <- stats::setNames(
+          location_choices$id,
+          location_choices$label
+        )
+
+        shiny::tagList(
+          shiny::h4("Seleção de origem e destino"),
+          shiny::helpText(
+            if (has_unit_polygons) {
+              "Clique em um polígono para definir a origem e depois o destino. Você também pode usar a lista abaixo."
+            } else {
+              "Escolha a origem e o destino na lista abaixo."
+            }
+          ),
+          shiny::div(
+            style = "display: flex; gap: 8px; margin-bottom: 10px;",
+            shiny::actionButton(
+              "pick_origin_map",
+              "Selecionar origem no mapa",
+              style = "flex: 1;"
+            ),
+            shiny::actionButton(
+              "pick_destination_map",
+              "Selecionar destino no mapa",
+              style = "flex: 1;"
+            )
+          ),
+          shiny::div(
+            style = "font-size: 12px; color: #6c757d; margin-bottom: 10px;",
+            shiny::strong("Próximo clique no mapa:"),
+            if (selection_target() == "origin") " origem" else " destino"
+          ),
+          shiny::actionButton(
+            "reset",
+            "Limpar seleção",
+            style = "width: 100%; margin-bottom: 10px;"
+          ),
+          shiny::selectizeInput(
+            "origin_unit_internal",
+            "Origem",
+            choices = location_choices_vector,
+            selected = NULL,
+            options = list(placeholder = "Selecione a origem")
+          ),
+          shiny::selectizeInput(
+            "destination_unit_internal",
+            "Destino",
+            choices = location_choices_vector,
+            selected = NULL,
+            options = list(placeholder = "Selecione o destino")
+          )
+        )
+      } else {
+        shiny::tagList(
+          shiny::h4("Seleção de pontos"),
+          shiny::helpText("Clique esquerdo: origem. Clique direito: destino."),
+          shiny::actionButton(
+            "reset",
+            "Limpar seleção",
+            style = "width: 100%; margin-bottom: 10px;"
+          ),
+          shiny::textInput(
+            "start_coords_input",
+            "Origem (Lat, Lon)",
+            placeholder = "-30.03, -51.22"
+          ),
+          shiny::textInput(
+            "end_coords_input",
+            "Destino (Lat, Lon)",
+            placeholder = "-30.05, -51.18"
+          )
+        )
+      }
     })
 
     # Basemap Selector UI
@@ -138,8 +221,87 @@ function(app_args) {
       }
     })
 
+    update_polygon_highlights <- function() {
+      if (!has_unit_polygons) {
+        return(invisible(FALSE))
+      }
+
+      proxy <- mapgl::maplibre_proxy("map")
+      origin_id <- if (!is.null(selected_location_ids$origin)) {
+        selected_location_ids$origin
+      } else {
+        "__none__"
+      }
+      destination_id <- if (!is.null(selected_location_ids$destination)) {
+        selected_location_ids$destination
+      } else {
+        "__none__"
+      }
+
+      mapgl::set_filter(
+        proxy,
+        "ufba_units_origin_highlight",
+        list(
+          "==",
+          mapgl::get_column("unit_id"),
+          origin_id
+        )
+      )
+      mapgl::set_filter(
+        proxy,
+        "ufba_units_destination_highlight",
+        list(
+          "==",
+          mapgl::get_column("unit_id"),
+          destination_id
+        )
+      )
+      invisible(TRUE)
+    }
+
+    update_location_selection <- function(target, selected_id, sync_input = FALSE) {
+      if (!has_unit_selection || is.null(selected_id) || selected_id == "") {
+        return(invisible(FALSE))
+      }
+
+      row_index <- match(selected_id, location_choices$id)
+      if (is.na(row_index)) {
+        return(invisible(FALSE))
+      }
+
+      coords <- list(
+        lat = as.numeric(location_choices$lat[[row_index]]),
+        lon = as.numeric(location_choices$lon[[row_index]])
+      )
+
+      if (target == "origin") {
+        locations$start <- coords
+        selected_location_ids$origin <- selected_id
+        if (sync_input) {
+          shiny::updateSelectInput(
+            session,
+            "origin_unit_internal",
+            selected = selected_id
+          )
+        }
+      } else {
+        locations$end <- coords
+        selected_location_ids$destination <- selected_id
+        if (sync_input) {
+          shiny::updateSelectInput(
+            session,
+            "destination_unit_internal",
+            selected = selected_id
+          )
+        }
+      }
+
+      update_polygon_highlights()
+      invisible(TRUE)
+    }
+
     output$map <- mapgl::renderMaplibre({
-      mapgl::maplibre(
+      map <- mapgl::maplibre(
         center = map_center,
         zoom = map_zoom,
         style = unname(basemaps[[1]])
@@ -147,136 +309,211 @@ function(app_args) {
         mapgl::add_navigation_control(position = "bottom-right") |>
         mapgl::add_fullscreen_control(position = "bottom-right") |>
         mapgl::add_scale_control(position = "bottom-left", unit = "metric")
+
+      if (has_unit_polygons) {
+        map <- map |>
+          mapgl::add_source(id = "ufba_units_source", data = unit_polygons) |>
+          mapgl::add_fill_layer(
+            id = "ufba_units_base",
+            source = "ufba_units_source",
+            fill_color = "#8ecae6",
+            fill_opacity = 0.35,
+            fill_outline_color = "#023047",
+            tooltip = "unit_name"
+          ) |>
+          mapgl::add_fill_layer(
+            id = "ufba_units_origin_highlight",
+            source = "ufba_units_source",
+            fill_color = "#2a9d8f",
+            fill_opacity = 0.75,
+            fill_outline_color = "#006d77",
+            filter = list(
+              "==",
+              mapgl::get_column("unit_id"),
+              "__none__"
+            )
+          ) |>
+          mapgl::add_fill_layer(
+            id = "ufba_units_destination_highlight",
+            source = "ufba_units_source",
+            fill_color = "#e76f51",
+            fill_opacity = 0.75,
+            fill_outline_color = "#9d4edd",
+            filter = list(
+              "==",
+              mapgl::get_column("unit_id"),
+              "__none__"
+            )
+          )
+      }
+
+      map
     })
 
-    # --- COORDINATE HANDLING LOGIC ---
-    shiny::observeEvent(input$map_click, {
-      coords <- list(lon = input$map_click$lng, lat = input$map_click$lat)
-      coords <- list(lat = round(coords$lat, 5), lon = round(coords$lon, 5))
-      locations$start <- coords
-      session$sendCustomMessage(
-        type = 'updateMarker',
-        message = list(id = 'start', lng = coords$lon, lat = coords$lat)
-      )
-      shiny::updateTextInput(
-        session,
-        "start_coords_input",
-        value = paste(round(coords$lat, 5), round(coords$lon, 5), sep = ", ")
-      )
-    })
+    if (has_unit_selection) {
+      shiny::observeEvent(input$pick_origin_map, {
+        selection_target("origin")
+      })
 
-    shiny::observeEvent(input$js_right_click, {
-      coords <- list(
-        lon = input$js_right_click$lng,
-        lat = input$js_right_click$lat
-      )
-      coords <- list(lat = round(coords$lat, 5), lon = round(coords$lon, 5))
-      locations$end <- coords
-      session$sendCustomMessage(
-        type = 'updateMarker',
-        message = list(id = 'end', lng = coords$lon, lat = coords$lat)
-      )
-      shiny::updateTextInput(
-        session,
-        "end_coords_input",
-        value = paste(round(coords$lat, 5), round(coords$lon, 5), sep = ", ")
-      )
-    })
+      shiny::observeEvent(input$pick_destination_map, {
+        selection_target("destination")
+      })
 
-    shiny::observeEvent(input$marker_dragged, {
-      drag_info <- input$marker_dragged
-      new_coords <- list(lon = drag_info$lng, lat = drag_info$lat)
-      new_coords <- list(
-        lat = round(new_coords$lat, 5),
-        lon = round(new_coords$lon, 5)
-      )
-      if (drag_info$id == "start") {
-        locations$start <- new_coords
+      shiny::observeEvent(input$origin_unit_internal, {
+        shiny::req(input$origin_unit_internal)
+        update_location_selection("origin", input$origin_unit_internal)
+      }, ignoreInit = TRUE)
+
+      shiny::observeEvent(input$destination_unit_internal, {
+        shiny::req(input$destination_unit_internal)
+        update_location_selection("destination", input$destination_unit_internal)
+      }, ignoreInit = TRUE)
+
+      shiny::observeEvent(input$ufba_unit_click, {
+        shiny::req(input$ufba_unit_click$id)
+        current_target <- selection_target()
+        update_location_selection(current_target, input$ufba_unit_click$id, sync_input = TRUE)
+        selection_target(if (current_target == "origin") "destination" else "origin")
+      }, ignoreInit = TRUE)
+    } else {
+      # --- COORDINATE HANDLING LOGIC ---
+      shiny::observeEvent(input$map_click, {
+        coords <- list(lon = input$map_click$lng, lat = input$map_click$lat)
+        coords <- list(lat = round(coords$lat, 5), lon = round(coords$lon, 5))
+        locations$start <- coords
+        session$sendCustomMessage(
+          type = 'updateMarker',
+          message = list(id = 'start', lng = coords$lon, lat = coords$lat)
+        )
         shiny::updateTextInput(
           session,
           "start_coords_input",
-          value = paste(
-            round(new_coords$lat, 5),
-            round(new_coords$lon, 5),
-            sep = ", "
-          )
+          value = paste(round(coords$lat, 5), round(coords$lon, 5), sep = ", ")
         )
-      } else if (drag_info$id == "end") {
-        locations$end <- new_coords
+      })
+
+      shiny::observeEvent(input$js_right_click, {
+        coords <- list(
+          lon = input$js_right_click$lng,
+          lat = input$js_right_click$lat
+        )
+        coords <- list(lat = round(coords$lat, 5), lon = round(coords$lon, 5))
+        locations$end <- coords
+        session$sendCustomMessage(
+          type = 'updateMarker',
+          message = list(id = 'end', lng = coords$lon, lat = coords$lat)
+        )
         shiny::updateTextInput(
           session,
           "end_coords_input",
-          value = paste(
-            round(new_coords$lat, 5),
-            round(new_coords$lon, 5),
-            sep = ", "
+          value = paste(round(coords$lat, 5), round(coords$lon, 5), sep = ", ")
+        )
+      })
+
+      shiny::observeEvent(input$marker_dragged, {
+        drag_info <- input$marker_dragged
+        new_coords <- list(lon = drag_info$lng, lat = drag_info$lat)
+        new_coords <- list(
+          lat = round(new_coords$lat, 5),
+          lon = round(new_coords$lon, 5)
+        )
+        if (drag_info$id == "start") {
+          locations$start <- new_coords
+          shiny::updateTextInput(
+            session,
+            "start_coords_input",
+            value = paste(
+              round(new_coords$lat, 5),
+              round(new_coords$lon, 5),
+              sep = ", "
+            )
           )
-        )
-      }
-    })
+        } else if (drag_info$id == "end") {
+          locations$end <- new_coords
+          shiny::updateTextInput(
+            session,
+            "end_coords_input",
+            value = paste(
+              round(new_coords$lat, 5),
+              round(new_coords$lon, 5),
+              sep = ", "
+            )
+          )
+        }
+      })
 
-    shiny::observeEvent(
-      input$start_coords_input,
-      {
-        shiny::req(input$start_coords_input)
-        tryCatch(
-          {
-            parts <- as.numeric(trimws(strsplit(input$start_coords_input, ",")[[
-              1
-            ]]))
-            if (length(parts) == 2 && !any(is.na(parts))) {
-              coords <- list(lat = parts[1], lon = parts[2])
-              if (!isTRUE(all.equal(locations$start, coords))) {
-                locations$start <- coords
-                session$sendCustomMessage(
-                  type = 'updateMarker',
-                  message = list(
-                    id = 'start',
-                    lng = coords$lon,
-                    lat = coords$lat
+      shiny::observeEvent(
+        input$start_coords_input,
+        {
+          shiny::req(input$start_coords_input)
+          tryCatch(
+            {
+              parts <- as.numeric(trimws(strsplit(input$start_coords_input, ",")[[
+                1
+              ]]))
+              if (length(parts) == 2 && !any(is.na(parts))) {
+                coords <- list(lat = parts[1], lon = parts[2])
+                if (!isTRUE(all.equal(locations$start, coords))) {
+                  locations$start <- coords
+                  session$sendCustomMessage(
+                    type = 'updateMarker',
+                    message = list(
+                      id = 'start',
+                      lng = coords$lon,
+                      lat = coords$lat
+                    )
                   )
-                )
+                }
               }
-            }
-          },
-          error = function(e) {}
-        )
-      },
-      ignoreInit = TRUE
-    )
+            },
+            error = function(e) {}
+          )
+        },
+        ignoreInit = TRUE
+      )
 
-    shiny::observeEvent(
-      input$end_coords_input,
-      {
-        shiny::req(input$end_coords_input)
-        tryCatch(
-          {
-            parts <- as.numeric(trimws(strsplit(input$end_coords_input, ",")[[
-              1
-            ]]))
-            if (length(parts) == 2 && !any(is.na(parts))) {
-              coords <- list(lat = parts[1], lon = parts[2])
-              if (!isTRUE(all.equal(locations$end, coords))) {
-                locations$end <- coords
-                session$sendCustomMessage(
-                  type = 'updateMarker',
-                  message = list(id = 'end', lng = coords$lon, lat = coords$lat)
-                )
+      shiny::observeEvent(
+        input$end_coords_input,
+        {
+          shiny::req(input$end_coords_input)
+          tryCatch(
+            {
+              parts <- as.numeric(trimws(strsplit(input$end_coords_input, ",")[[
+                1
+              ]]))
+              if (length(parts) == 2 && !any(is.na(parts))) {
+                coords <- list(lat = parts[1], lon = parts[2])
+                if (!isTRUE(all.equal(locations$end, coords))) {
+                  locations$end <- coords
+                  session$sendCustomMessage(
+                    type = 'updateMarker',
+                    message = list(id = 'end', lng = coords$lon, lat = coords$lat)
+                  )
+                }
               }
-            }
-          },
-          error = function(e) {}
-        )
-      },
-      ignoreInit = TRUE
-    )
+            },
+            error = function(e) {}
+          )
+        },
+        ignoreInit = TRUE
+      )
+    }
 
     shiny::observeEvent(input$reset, {
       locations$start <- NULL
       locations$end <- NULL
+      selected_location_ids$origin <- NULL
+      selected_location_ids$destination <- NULL
+      selection_target("origin")
       session$sendCustomMessage(type = 'clearAllMarkers', message = 'clear')
-      shiny::updateTextInput(session, "start_coords_input", value = "")
-      shiny::updateTextInput(session, "end_coords_input", value = "")
+      if (has_unit_selection) {
+        shiny::updateSelectInput(session, "origin_unit_internal", selected = character(0))
+        shiny::updateSelectInput(session, "destination_unit_internal", selected = character(0))
+        update_polygon_highlights()
+      } else {
+        shiny::updateTextInput(session, "start_coords_input", value = "")
+        shiny::updateTextInput(session, "end_coords_input", value = "")
+      }
       proxy <- mapgl::maplibre_proxy("map")
       mapgl::clear_layer(proxy, "route_layer_1")
       mapgl::clear_layer(proxy, "route_layer_2")
@@ -290,6 +527,27 @@ function(app_args) {
     # --- OBSERVERS TO CLEAR COPY CODE MESSAGE ---
     shiny::observeEvent(
       input$map_click,
+      {
+        copy_code_message(NULL)
+      },
+      ignoreInit = TRUE
+    )
+    shiny::observeEvent(
+      input$ufba_unit_click,
+      {
+        copy_code_message(NULL)
+      },
+      ignoreInit = TRUE
+    )
+    shiny::observeEvent(
+      input$origin_unit_internal,
+      {
+        copy_code_message(NULL)
+      },
+      ignoreInit = TRUE
+    )
+    shiny::observeEvent(
+      input$destination_unit_internal,
       {
         copy_code_message(NULL)
       },
@@ -357,7 +615,7 @@ function(app_args) {
         }
 
         shiny::showNotification(
-          if (is_comparing) "Calculating routes..." else "Calculating route...",
+          if (is_comparing) "Calculando rotas..." else "Calculando rota...",
           duration = 3,
           type = "message"
         )
@@ -679,12 +937,12 @@ function(app_args) {
 
         # Handle empty results notifications
         if (!is_comparing && !is.null(res) && nrow(res) == 0) {
-          shiny::showNotification("No route found.", type = "warning")
+          shiny::showNotification("Nenhuma rota encontrada.", type = "warning")
         } else if (is_comparing) {
           r1_empty <- is.null(res$res1) || nrow(res$res1) == 0
           r2_empty <- is.null(res$res2) || nrow(res$res2) == 0
           if (r1_empty && r2_empty) {
-            shiny::showNotification("No routes found.", type = "warning")
+            shiny::showNotification("Nenhuma rota encontrada.", type = "warning")
           }
         }
       })
@@ -767,7 +1025,7 @@ function(app_args) {
         copy_code_message(
           shiny::div(
             style = "background-color: #ea8436ff; color: white; padding: 5px 10px; border-radius: 5px; margin-bottom: 5px;",
-            "Please set start and end points on the map first."
+            "Defina primeiro a origem e o destino."
           )
         )
         return()
@@ -882,17 +1140,17 @@ function(app_args) {
       code_string <- paste0(setup_code, itinerary_call)
 
       shiny::showModal(shiny::modalDialog(
-        title = "R Code for detailed_itineraries()",
+        title = "Código R para detailed_itineraries()",
         shiny::textAreaInput(
           "code_output",
-          label = "Copy the code below:",
+          label = "Copie o código abaixo:",
           value = code_string,
           width = "100%",
           height = "300px",
           resize = "vertical"
         ),
         easyClose = TRUE,
-        footer = shiny::modalButton("Dismiss")
+        footer = shiny::modalButton("Fechar")
       ))
     })
 

@@ -1,0 +1,76 @@
+# r5rgui: Simple Shiny GUI for r5r
+
+[![DOI](https://zenodo.org/badge/DOI/10.32614/CRAN.package.r5rgui.svg)](https://doi.org/10.32614/CRAN.package.r5rgui)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17709914.svg)](https://doi.org/10.5281/zenodo.17709914)
+
+The goal of [r5rgui](https://github.com/e-kotov/r5rgui) is to allow the
+user to interactively explore routes calcualted with
+[`{r5r}`](https://github.com/ipeaGIT/r5r/) package in a `Shiny` app,
+e.g. for troubleshooting routing problems.
+
+## Installation
+
+Get it from CRAN:
+
+``` r
+
+install.packages("r5rgui")
+```
+
+Or get the latest development version from `R-Universe`:
+
+``` r
+
+install.packages(
+  "r5rgui",
+  repos = c("https://e-kotov.r-universe.dev", "https://cloud.r-project.org")
+)
+```
+
+You can also install the development version of
+[r5rgui](https://github.com/e-kotov/r5rgui) from
+[GitHub](https://github.com/e-kotov/r5rgui) with:
+
+``` r
+
+# install.packages("pak")
+pak::pak("e-kotov/r5rgui")
+```
+
+Also setup Java as as you would for r5r package:
+
+``` r
+
+# install.packages('rJavaEnv') # if not installed yet
+
+# install and use Java 21 in current session
+rJavaEnv::use_java(21)
+```
+
+## Example
+
+This is a basic example which shows you how to solve a common problem:
+
+``` r
+
+library(r5rgui)
+r5r_gui_demo()
+```
+
+![r5rgui
+demo](https://github.com/user-attachments/assets/7a2036ac-4b78-487a-93bb-593562d14d45)
+
+r5rgui demo
+
+What the demo runs internally is this simple example code:
+
+``` r
+
+library(r5r)
+data_path <- system.file("extdata/poa", package = "r5r")
+r5r_network <- build_network(data_path = data_path, verbose = FALSE)
+r5r_gui(r5r_network, center = c(-51.22, -30.05), zoom = 11)
+```
+
+Therefore you can replace `data_path` with your own data path and
+explore your own routing network.

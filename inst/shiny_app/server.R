@@ -806,7 +806,7 @@ function(app_args) {
           # Build legend title with execution time
           time_str <- if (!is.null(time_val)) {
             sprintf(
-              "<div style='font-size:10px; color:#777; margin-bottom:2px;'>Tempo de Query: %dms</div>",
+              "<div style='font-size:10px; color:#777; margin-bottom:2px;'>Tempo de Consulta: %dms</div>",
               round(time_val * 1000)
             )
           } else {
@@ -905,7 +905,7 @@ function(app_args) {
             "top-left",
             r5r_exec_time_1(),
             "legend_1",
-            paste0("Route 1", net1_label)
+            paste0("Rota 1", net1_label)
           )
           draw_route_layer(
             res$res2,
@@ -914,7 +914,7 @@ function(app_args) {
             "top-right",
             r5r_exec_time_2(),
             "legend_2",
-            paste0("Route 2", net2_label)
+            paste0("Rota 2", net2_label)
           )
         } else {
           net1_label <- if (
@@ -931,7 +931,7 @@ function(app_args) {
             "top-left",
             r5r_exec_time_1(),
             "legend_1",
-            paste0("Modes", net1_label)
+            paste0("Modos", net1_label)
           )
         }
 

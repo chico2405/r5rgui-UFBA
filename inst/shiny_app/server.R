@@ -806,7 +806,7 @@ function(app_args) {
           # Build legend title with execution time
           time_str <- if (!is.null(time_val)) {
             sprintf(
-              "<div style='font-size:10px; color:#777; margin-bottom:2px;'>Query time: %dms</div>",
+              "<div style='font-size:10px; color:#777; margin-bottom:2px;'>Tempo de Query: %dms</div>",
               round(time_val * 1000)
             )
           } else {
@@ -846,8 +846,8 @@ function(app_args) {
           }
 
           summary_labels <- c(
-            sprintf("Time: %s", dur_str),
-            sprintf("Dist: %g km", total_dist_km)
+            sprintf("Tempo: %s", dur_str),
+            sprintf("Distância: %g km", total_dist_km)
           )
 
           mapgl::add_legend(

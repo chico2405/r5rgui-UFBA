@@ -12,7 +12,7 @@ ui <- shiny::fluidPage(
       ),
       shiny::h3(
         shiny::HTML(
-          "<b>r5rgui</b> - Interactive Routing with <code>{r5r}</code> and <code>{mapgl}</code>"
+          "<b>r5rgui</b> - Roteamento interativo com <code>{r5r}</code> e <code>{mapgl}</code>"
         ),
         style = "margin: 0;"
       )
@@ -25,7 +25,7 @@ ui <- shiny::fluidPage(
     shiny::uiOutput("compare_mode_ui"),
     shiny::actionButton(
       "quit_app",
-      "Quit",
+      "Sair",
       style = "background-color: #d9534f; color: white; border-width: 0px;"
     ),
     # Hidden input for Compare Mode state
@@ -45,7 +45,7 @@ ui <- shiny::fluidPage(
         top: auto;
         left: auto;
       }
-      
+
       .main-layout {
         display: flex;
         height: calc(100vh - 120px);
@@ -53,7 +53,7 @@ ui <- shiny::fluidPage(
         padding: 0 15px;
         overflow: hidden;
       }
-      
+
       .sidebar-column {
         flex: 0 0 250px; /* Default width */
         overflow-y: auto;
@@ -64,7 +64,7 @@ ui <- shiny::fluidPage(
         min-width: 150px; /* Minimum width constraint */
         max-width: 600px;
       }
-      
+
       /* Resizer Styles */
       .resizer {
         width: 10px;
@@ -82,21 +82,21 @@ ui <- shiny::fluidPage(
       .resizer:hover, .resizer.resizing {
         background-color: #e9ecef;
       }
-      
+
       /* Media Queries for narrower defaults */
       @media (max-width: 1200px) {
         .sidebar-column {
           flex-basis: 200px;
         }
       }
-      
+
       @media (max-width: 992px) {
         .sidebar-column {
           flex-basis: 180px;
           font-size: 0.9em;
         }
       }
-      
+
       .map-column {
         flex: 1;
         display: flex;
@@ -108,11 +108,11 @@ ui <- shiny::fluidPage(
         position: relative;
         flex: 1;
       }
-      
+
       #map {
         height: 100% !important;
       }
-      
+
       .table-wrapper {
         height: 250px;
         overflow-y: auto;
@@ -121,7 +121,7 @@ ui <- shiny::fluidPage(
       }
 
       /* --- Map Control Stacking (Top & Bottom Right) --- */
-      
+
       /* Target both containers to ensure they don't stretch items */
       .maplibregl-ctrl-top-right, .maplibregl-ctrl-bottom-right {
         display: flex !important;
@@ -129,7 +129,7 @@ ui <- shiny::fluidPage(
         align-items: flex-end !important;
         pointer-events: none;
       }
-      
+
       .maplibregl-ctrl-top-right > *, .maplibregl-ctrl-bottom-right > * {
         pointer-events: auto;
       }
@@ -140,17 +140,17 @@ ui <- shiny::fluidPage(
         border-radius: 4px !important;
         box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
       }
-      
+
       /* In bottom-right, the groups (Zoom, Fullscreen) need to be pushed up to clear the basemap selector panel */
       .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group {
         margin-bottom: 75px !important; /* Combined height of selector + padding */
       }
-      
+
       /* Wait, if multiple groups exist, only the bottom-most needs the large margin */
       .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group:last-of-type {
         margin-bottom: 75px !important;
       }
-      
+
       /* Overriding the generic margin if it's not the last one */
       .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group {
         margin-bottom: 5px !important;
@@ -174,11 +174,11 @@ ui <- shiny::fluidPage(
         box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         border: 1px solid #ccc;
       }
-      
+
       .basemap-panel .form-group {
         margin-bottom: 0 !important; /* Kill the 'fat lip' */
       }
-      
+
       .basemap-panel .selectize-control {
         margin-bottom: 0 !important;
       }
@@ -208,7 +208,7 @@ ui <- shiny::fluidPage(
         const loadWidths = () => {
             const leftWidth = localStorage.getItem('r5rgui-left-width');
             const rightWidth = localStorage.getItem('r5rgui-right-width');
-            
+
             if (leftWidth) {
                 const sidebar = document.querySelector('.sidebar-left');
                 if (sidebar) {
@@ -248,22 +248,22 @@ ui <- shiny::fluidPage(
         document.addEventListener('mousedown', function(e) {
             if (e.target.classList.contains('resizer')) {
                 const isLeft = e.target.id === 'resizer-left';
-                const sidebar = isLeft 
-                    ? document.querySelector('.sidebar-left') 
+                const sidebar = isLeft
+                    ? document.querySelector('.sidebar-left')
                     : document.querySelector('.sidebar-right');
-                
+
                 if (!sidebar) return;
 
                 const startX = e.clientX;
                 const startWidth = sidebar.offsetWidth;
-                
+
                 const moveHandler = (e) => {
                     const dx = e.clientX - startX;
                     const newWidth = isLeft ? startWidth + dx : startWidth - dx;
                     if (newWidth >= 150 && newWidth <= 600) {
                         sidebar.style.flexBasis = newWidth + 'px';
                         sidebar.style.width = newWidth + 'px';
-                        window.dispatchEvent(new Event('resize')); 
+                        window.dispatchEvent(new Event('resize'));
                     }
                 };
 
@@ -353,21 +353,21 @@ ui <- shiny::fluidPage(
                   endMarker = null;
               }
           });
-          
+
           Shiny.addCustomMessageHandler('setPersistentStyle', function(message) {
             const mapElement = document.getElementById('map');
             if (!mapElement || !mapElement.map) return;
             const map = mapElement.map;
-            
+
             const newStyleUrl = message.styleUrl;
-            
+
             fetch(newStyleUrl)
               .then(response => response.json())
               .then(newStyle => {
                 const currentStyle = map.getStyle();
-                
+
                 // Identify layers to preserve (specifically route layers)
-                const layersToPreserve = currentStyle.layers.filter(l => 
+                const layersToPreserve = currentStyle.layers.filter(l =>
                   l.id && (
                     l.id.startsWith('route') ||
                     l.id.startsWith('ufba_units_') ||
@@ -375,7 +375,7 @@ ui <- shiny::fluidPage(
                     l.id === 'route_layer_2'
                   )
                 );
-                
+
                 if (layersToPreserve.length === 0) {
                    map.setStyle(newStyle, { diff: true });
                    return;
@@ -388,14 +388,14 @@ ui <- shiny::fluidPage(
                     sourcesToPreserve[l.source] = currentStyle.sources[l.source];
                   }
                 });
-                
+
                 // Merge sources and layers
                 newStyle.sources = Object.assign({}, newStyle.sources, sourcesToPreserve);
                 newStyle.layers = newStyle.layers.concat(layersToPreserve);
-                
+
                 // Apply the new style with diff=true
                 map.setStyle(newStyle, { diff: true });
-                
+
               })
               .catch(err => {
                 console.error('Error fetching/setting persistent style:', err);
@@ -455,7 +455,7 @@ ui <- shiny::fluidPage(
       shiny::uiOutput("network_selector_1"),
       shiny::selectInput(
         "mode_1_internal", # We sync this with 'mode' or 'mode_1'
-        "Transport Modes",
+        "Modos de transporte",
         choices = c(
           "WALK",
           "BICYCLE",
@@ -477,31 +477,31 @@ ui <- shiny::fluidPage(
       ),
       shiny::dateInput(
         "departure_date_1_internal",
-        "Departure Date",
+        "Data de partida",
         value = "2019-05-13"
       ),
       shiny::textInput(
         "departure_time_1_internal",
-        "Departure Time (HH:MM)",
+        "Horário de partida (HH:MM)",
         value = "14:00"
       ),
       shiny::numericInput(
         "time_window_1_internal",
-        "Time Window (min)",
+        "Janela de tempo (min)",
         value = 10,
         min = 1,
         max = 180
       ),
       shiny::numericInput(
         "max_walk_time_1_internal",
-        "Max Walk Time (min)",
+        "Tempo máximo a pé (min)",
         value = 15,
         min = 1,
         max = 120
       ),
       shiny::numericInput(
         "max_trip_duration_1_internal",
-        "Max Trip Duration (min)",
+        "Duração máxima da viagem (min)",
         value = 120,
         min = 5,
         max = 300
@@ -523,7 +523,7 @@ ui <- shiny::fluidPage(
           style = "position: absolute; bottom: 35px; left: 10px; z-index: 10; display: flex; flex-direction: column; align-items: flex-start;",
           # Exec time is now in legends, but keep message and copy code here
           shiny::uiOutput("copy_code_message_ui"),
-          shiny::actionButton("copy_code", "Copy R Code")
+          shiny::actionButton("copy_code", "Copiar código em R")
         ),
         # Basemap Selector
         shiny::absolutePanel(
@@ -539,7 +539,7 @@ ui <- shiny::fluidPage(
         class = "table-wrapper",
         shiny::conditionalPanel(
           condition = "!input.compare_mode",
-          shiny::h4("Itinerary Details"),
+          shiny::h4("Detalhes do itinerário"),
           DT::dataTableOutput("itinerary_table")
         ),
         shiny::conditionalPanel(
@@ -547,12 +547,12 @@ ui <- shiny::fluidPage(
           shiny::tabsetPanel(
             id = "compare_tabs_tables",
             shiny::tabPanel(
-              "Route 1",
+              "Rota 1",
               shiny::div(style = "padding-top:10px;"),
               DT::dataTableOutput("itinerary_table_1")
             ),
             shiny::tabPanel(
-              "Route 2",
+              "Rota 2",
               shiny::div(style = "padding-top:10px;"),
               DT::dataTableOutput("itinerary_table_2")
             )
@@ -571,11 +571,11 @@ ui <- shiny::fluidPage(
 
       shiny::div(
         class = "sidebar-column sidebar-right",
-        shiny::h4("Route 2 Settings"),
+        shiny::h4("Configurações da rota 2"),
         shiny::uiOutput("network_selector_2"),
         shiny::selectInput(
           "mode_2_internal",
-          "Transport Modes",
+          "Modos de transporte",
           choices = c(
             "WALK",
             "BICYCLE",
@@ -597,31 +597,31 @@ ui <- shiny::fluidPage(
         ),
         shiny::dateInput(
           "departure_date_2_internal",
-          "Departure Date",
+          "Data de partida",
           value = "2019-05-13"
         ),
         shiny::textInput(
           "departure_time_2_internal",
-          "Departure Time (HH:MM)",
+          "Horário de partida (HH:MM)",
           value = "14:00"
         ),
         shiny::numericInput(
           "time_window_2_internal",
-          "Time Window (min)",
+          "Janela de tempo (min)",
           value = 10,
           min = 1,
           max = 180
         ),
         shiny::numericInput(
           "max_walk_time_2_internal",
-          "Max Walk Time (min)",
+          "Tempo máximo a pé (min)",
           value = 15,
           min = 1,
           max = 120
         ),
         shiny::numericInput(
           "max_trip_duration_2_internal",
-          "Max Trip Duration (min)",
+          "Duração máxima da viagem (min)",
           value = 120,
           min = 5,
           max = 300

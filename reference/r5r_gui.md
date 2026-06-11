@@ -14,7 +14,15 @@ r5r_gui(
   departure_date = Sys.Date(),
   mode = c("WALK", "TRANSIT"),
   basemaps = list(Positron = mapgl::carto_style("positron"), `Dark Matter` =
-    mapgl::carto_style("dark-matter"), Voyager = mapgl::carto_style("voyager"))
+    mapgl::carto_style("dark-matter"), Voyager = mapgl::carto_style("voyager")),
+  location_choices = NULL,
+  location_id_col = "id",
+  location_label_col = "name",
+  location_lon_col = "lon",
+  location_lat_col = "lat",
+  unit_polygons = NULL,
+  unit_polygon_id_col = "osm_id",
+  unit_polygon_label_col = "name"
 )
 ```
 
@@ -63,6 +71,47 @@ r5r_gui(
   styles (Voyager, Positron, Dark Matter). See [mapgl styling
   helpers](https://walker-data.com/mapgl/reference/index.html#styling-helpers)
   for options.
+
+- location_choices:
+
+  Optional data frame with the possible origins and destinations. When
+  provided, the GUI uses dropdowns instead of free-form coordinate
+  fields.
+
+- location_id_col:
+
+  Name of the column in `location_choices` that stores the internal
+  identifier used in the dropdowns. Defaults to `"id"`.
+
+- location_label_col:
+
+  Name of the column in `location_choices` that stores the visible label
+  used in the dropdowns. Defaults to `"name"`.
+
+- location_lon_col:
+
+  Name of the longitude column in `location_choices`. Defaults to
+  `"lon"`.
+
+- location_lat_col:
+
+  Name of the latitude column in `location_choices`. Defaults to
+  `"lat"`.
+
+- unit_polygons:
+
+  Optional `sf` object with the unit polygons to draw on the map. If
+  provided, the polygons will be clickable and show hover labels.
+
+- unit_polygon_id_col:
+
+  Name of the polygon column that stores the internal unit identifier.
+  Defaults to `"id"`.
+
+- unit_polygon_label_col:
+
+  Name of the polygon column that stores the visible unit name. Defaults
+  to `"name"`.
 
 ## Value
 

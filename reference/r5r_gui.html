@@ -57,7 +57,15 @@ user interface for the 'r5r' package, allowing for interactive transit routing.<
 <span>  departure_date <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.Date</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"WALK"</span>, <span class="st">"TRANSIT"</span><span class="op">)</span>,</span>
 <span>  basemaps <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>Positron <span class="op">=</span> <span class="fu">mapgl</span><span class="fu">::</span><span class="fu"><a href="https://walker-data.com/mapgl/reference/carto_style.html" class="external-link">carto_style</a></span><span class="op">(</span><span class="st">"positron"</span><span class="op">)</span>, `Dark Matter` <span class="op">=</span></span>
-<span>    <span class="fu">mapgl</span><span class="fu">::</span><span class="fu"><a href="https://walker-data.com/mapgl/reference/carto_style.html" class="external-link">carto_style</a></span><span class="op">(</span><span class="st">"dark-matter"</span><span class="op">)</span>, Voyager <span class="op">=</span> <span class="fu">mapgl</span><span class="fu">::</span><span class="fu"><a href="https://walker-data.com/mapgl/reference/carto_style.html" class="external-link">carto_style</a></span><span class="op">(</span><span class="st">"voyager"</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="fu">mapgl</span><span class="fu">::</span><span class="fu"><a href="https://walker-data.com/mapgl/reference/carto_style.html" class="external-link">carto_style</a></span><span class="op">(</span><span class="st">"dark-matter"</span><span class="op">)</span>, Voyager <span class="op">=</span> <span class="fu">mapgl</span><span class="fu">::</span><span class="fu"><a href="https://walker-data.com/mapgl/reference/carto_style.html" class="external-link">carto_style</a></span><span class="op">(</span><span class="st">"voyager"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  location_choices <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  location_id_col <span class="op">=</span> <span class="st">"id"</span>,</span>
+<span>  location_label_col <span class="op">=</span> <span class="st">"name"</span>,</span>
+<span>  location_lon_col <span class="op">=</span> <span class="st">"lon"</span>,</span>
+<span>  location_lat_col <span class="op">=</span> <span class="st">"lat"</span>,</span>
+<span>  unit_polygons <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  unit_polygon_id_col <span class="op">=</span> <span class="st">"osm_id"</span>,</span>
+<span>  unit_polygon_label_col <span class="op">=</span> <span class="st">"name"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -88,6 +96,38 @@ If a list is provided, the list names will be used as labels in the GUI. If a si
 
 <dt id="arg-basemaps">basemaps<a class="anchor" aria-label="anchor" href="#arg-basemaps"></a></dt>
 <dd><p>A named list of MapLibre style URLs (or style generator functions like <code><a href="https://walker-data.com/mapgl/reference/carto_style.html" class="external-link">mapgl::carto_style()</a></code>). The names are used in the GUI selector. Defaults to a set of Carto styles (Voyager, Positron, Dark Matter). See <a href="https://walker-data.com/mapgl/reference/index.html#styling-helpers" class="external-link">mapgl styling helpers</a> for options.</p></dd>
+
+
+<dt id="arg-location-choices">location_choices<a class="anchor" aria-label="anchor" href="#arg-location-choices"></a></dt>
+<dd><p>Optional data frame with the possible origins and destinations. When provided, the GUI uses dropdowns instead of free-form coordinate fields.</p></dd>
+
+
+<dt id="arg-location-id-col">location_id_col<a class="anchor" aria-label="anchor" href="#arg-location-id-col"></a></dt>
+<dd><p>Name of the column in <code>location_choices</code> that stores the internal identifier used in the dropdowns. Defaults to <code>"id"</code>.</p></dd>
+
+
+<dt id="arg-location-label-col">location_label_col<a class="anchor" aria-label="anchor" href="#arg-location-label-col"></a></dt>
+<dd><p>Name of the column in <code>location_choices</code> that stores the visible label used in the dropdowns. Defaults to <code>"name"</code>.</p></dd>
+
+
+<dt id="arg-location-lon-col">location_lon_col<a class="anchor" aria-label="anchor" href="#arg-location-lon-col"></a></dt>
+<dd><p>Name of the longitude column in <code>location_choices</code>. Defaults to <code>"lon"</code>.</p></dd>
+
+
+<dt id="arg-location-lat-col">location_lat_col<a class="anchor" aria-label="anchor" href="#arg-location-lat-col"></a></dt>
+<dd><p>Name of the latitude column in <code>location_choices</code>. Defaults to <code>"lat"</code>.</p></dd>
+
+
+<dt id="arg-unit-polygons">unit_polygons<a class="anchor" aria-label="anchor" href="#arg-unit-polygons"></a></dt>
+<dd><p>Optional <code>sf</code> object with the unit polygons to draw on the map. If provided, the polygons will be clickable and show hover labels.</p></dd>
+
+
+<dt id="arg-unit-polygon-id-col">unit_polygon_id_col<a class="anchor" aria-label="anchor" href="#arg-unit-polygon-id-col"></a></dt>
+<dd><p>Name of the polygon column that stores the internal unit identifier. Defaults to <code>"id"</code>.</p></dd>
+
+
+<dt id="arg-unit-polygon-label-col">unit_polygon_label_col<a class="anchor" aria-label="anchor" href="#arg-unit-polygon-label-col"></a></dt>
+<dd><p>Name of the polygon column that stores the visible unit name. Defaults to <code>"name"</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">

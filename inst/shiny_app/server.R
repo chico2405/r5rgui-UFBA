@@ -138,19 +138,6 @@ function(app_args) {
             }
           ),
           shiny::div(
-            style = "display: flex; gap: 8px; margin-bottom: 10px;",
-            shiny::actionButton(
-              "pick_origin_map",
-              "Selecionar origem no mapa",
-              style = "flex: 1;"
-            ),
-            shiny::actionButton(
-              "pick_destination_map",
-              "Selecionar destino no mapa",
-              style = "flex: 1;"
-            )
-          ),
-          shiny::div(
             style = "font-size: 12px; color: #6c757d; margin-bottom: 10px;",
             shiny::strong("Próximo clique no mapa:"),
             if (selection_target() == "origin") " origem" else " destino"
@@ -164,14 +151,14 @@ function(app_args) {
             "origin_unit_internal",
             "Origem",
             choices = location_choices_vector,
-            selected = NULL,
+            selected = character(0),
             options = list(placeholder = "Selecione a origem")
           ),
           shiny::selectizeInput(
             "destination_unit_internal",
             "Destino",
             choices = location_choices_vector,
-            selected = NULL,
+            selected = character(0),
             options = list(placeholder = "Selecione o destino")
           )
         )

@@ -151,15 +151,19 @@ function(app_args) {
             "origin_unit_internal",
             "Origem",
             choices = location_choices_vector,
-            selected = character(0),
-            options = list(placeholder = "Selecione a origem")
+            selected = "",
+            multiple = FALSE,
+            options = list(placeholder = "Selecione a origem",
+                           onInitialize = I('function() { this.setValue(""); }'))
           ),
           shiny::selectizeInput(
             "destination_unit_internal",
             "Destino",
             choices = location_choices_vector,
-            selected = character(0),
-            options = list(placeholder = "Selecione o destino")
+            selected = "",
+            multiple = FALSE,
+            options = list(placeholder = "Selecione o destino",
+                           onInitialize = I('function() { this.setValue(""); }'))
           )
         )
       } else {
